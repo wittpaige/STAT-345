@@ -1,0 +1,209 @@
+---
+title: "STAT 345 Midterm Project"
+date: "Due April 9"
+output:
+  word_document: default
+  pdf_document: default
+  html_document: default
+font: 12pt
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+> "NOBODY KNOWS ANYTHING. Not one person in the entire motion picture field knows for a certainty what’s going to work. Every time out it’s a guess—and, if you’re lucky, an educated one." William Goldman, _Adventures in the Screen Trade_
+
+Your data for the midterm project consists of the 1000 highest rated movies on the Internet Movie Database (IMDB). You can find the first 50 movies [here](https://www.imdb.com/search/title/?groups=top_1000&start=1), with navigational links to the other 950 movies.
+
+Each IMDB page records a large amount of information about each movie. We are interested in the following:
+
+   * The average rating of the movie by IMDB users. 
+   * The number of ratings of the movie. 
+   * The year the movie was released. 
+   * The gross revenue of the movie (US).
+   * The budget for the movie.
+   * The movie's title.
+   * The movie’s genre(s). 
+   * The four top-billed actors.
+   * The text of the 25 "most helpful" reviews, as well as their helpfulness (ratio of helpful votes out of total votes.) 
+    
+Note that the first five (and last) variables are numeric, and the genre, title, and reviews are strings. In some cases, some of these variables may be missing for a particular movie.
+
+In some cases, the business information page lists multiple gross revenues, depending on the country, or gross receipts by different dates. In case of ambiguity, we are interested in gross receipts for the US, and want to use the figure for the latest available date. If no gross revenue figure is available for the US, treat the gross revenue as missing.
+
+**General advice:** Get started on this one early. If you wait to the last minute, it will not go well.
+
+1. (30 pts) Write code to extract the variables described above from all 1000 movies, and store it in a data frame. For full credit, you should write a function which can extract this information from an arbitrary movie code (or url), and then further code which uses that function and applies it to all 1000 movies. For full credit, your code should avoid loops in favor of vectorized operations and apply (and sapply, lapply, etc., as convenient). Your code should handle missing values appropriately, and should not convert categorical variables into numbers, or numbers into strings, etc. 
+```{r, eval = FALSE}
+
+library(tidyverse)
+library(rvest)
+library(dplyr)
+library(XML) 
+
+
+#extract variables described above from all 1000 movies, and store it in a data frame
+url <- "https://www.imdb.com/search/title/?groups=top_1000&start=1"
+
+mydata <- function (imdbcodes)
+{
+url1 <-str_c("https://www.imdb.com/search/title/?groups=top_1000&start=1", imdbcodes, "/?ref_=adv_li_tt")
+movies1 <- read_html(url1)
+
+url2 <- str_c("https://www.imdb.com/search/title/?groups=top_1000&start=1" ,imdbcodes, "/reviews?ref_=tt_urv")
+movies2 <- read_html(url2)
+
+#The average rating of the movie by IMDB users
+avgrating <- html_nodes(movies1, "strong span")
+avgrating <-html_text(avgrating, trim = T) %>% as.numeric()
+
+#The number of ratings of the movie
+norating <- html_nodes(movies1, ".small") [[2]]
+norating <- html_text(norating, trim = T)%>% str_remove_all("[$,]+") %>% as.numeric()
+
+#The year the movie was released
+year <- html_nodes(movies1, "#titleYear a")
+year <- html_text(year,trim = T) %>% as.numeric()
+
+#The gross revenue of the movie (US)
+movies3 <- read_lines(url1)
+gross1 <- movies3 %>% str_which("Worldwide Gross") 
+totalgross<- movies3[gross1]
+worldgross <- totalgross %>% 
+  str_extract_all("\\d") %>%
+  unlist() %>%
+  str_c(collapse="") %>%
+  as.numeric()
+gross2 <- worldgross
+
+#The budget for the movie
+budget <- html_nodes(movies1) #(movies1, ##)
+budget <- html_text(budget, trim = T) %>% as.numeric()
+
+#The movie's title
+title <- html_nodes(movies1, "#ratingWidget strong")
+title <- html_text(title)
+
+#The movie's genre(s)
+genre <- html_nodes(movies1, ".subtext a:nth-child(4)")
+genre <- html_text(genre)
+
+#The four top-billed actors
+actors <- html_nodes(movies1) #(movies1, ##)
+actors <- html_text(actors, trim = T) %>% as.numeric()
+
+#The text of the 25 "most helpful" reviews, as well as their helpfulness (ratio of helpful votes out of total votes.) 
+review1 <- html_nodes(movies2, "point-scale , .text")
+review2 <- html_text(review1, trim = T)
+if (str_which(review1, "\\d+"))
+{
+  ratingreview <- review2 %>% str_extract("\\d") %>% str_replace_all("1", "10")
+  review2 <- review2 %>% str_remove_all("\\d") %>% str_remove_all("\\d/\\d")   %>% str_remove_all("/")
+ 
+}
+
+data_frame(AverageRating = avgrating %>% as.numeric(),
+           NumberRatings = norating %>% as.numeric(),
+           Year = year %>% as.numeric(),
+           Gross = gross %>% as.numeric(),
+           Budget = budget %>% as.numeric(),
+           Title = title,
+           Genre = genre,
+           Actors = actors,
+                     Review1 = review2[1],
+                     Review2 = review2[2],
+                     Review3 = review2[3],
+                     Review4 = review2[4],
+                     Review5 = review2[5],
+                     Review6 = review2[6],
+                     Review7 = review2[7],
+                     Review8 = review2[8],
+                     Review9 = review2[9],
+                     Review10 = review2[10],
+                     Review11 = review2[11],
+                     Review12 = review2[12],
+                     Review13 = review2[13],
+                     Review14 = review2[14],
+                     Review15 = review2[15],
+                     Review16 = review2[16],
+                     Review17 = review2[17],
+                     Review18 = review2[18],
+                     Review19 = review2[19],
+                     Review20 = review2[20],
+                     Review21 = review2[21],
+                     Review22 = review2[22],
+                     Review23 = review2[23],
+                     Review24 = review2[24],
+                     Review25 = review2[25],
+                     Rating1 = ratingreview[1] %>% as.numeric(),
+                     Rating2 = ratingreview[2] %>% as.numeric(),
+                     Rating3 = ratingreview[3]  %>% as.numeric(),
+                     Rating4 = ratingreview[4] %>% as.numeric(),
+                     Rating5 = ratingreview[5] %>% as.numeric(),
+                     Rating6 = ratingreview[6] %>% as.numeric(),
+                     Rating7 = ratingreview[7] %>% as.numeric(),
+                     Rating8 = ratingreview[8] %>% as.numeric(),
+                     Rating9 = ratingreview[9] %>% as.numeric(),
+                     Rating10 = ratingreview[10] %>% as.numeric(),
+                     Rating11 = ratingreview[11] %>% as.numeric(),
+                     Rating12 = ratingreview[12] %>% as.numeric(),
+                     Rating13 = ratingreview[13] %>% as.numeric(),
+                     Rating14 = ratingreview[14] %>% as.numeric(),
+                     Rating15 = ratingreview[15] %>% as.numeric(),
+                     Rating16 = ratingreview[16] %>% as.numeric(),
+                     Rating17 = ratingreview[17] %>% as.numeric(),
+                     Rating18 = ratingreview[18] %>% as.numeric(),
+                     Rating19 = ratingreview[19] %>% as.numeric(),
+                     Rating20 = ratingreview[20] %>% as.numeric(),
+                     Rating21 = ratingreview[21] %>% as.numeric(),
+                     Rating22 = ratingreview[22] %>% as.numeric(),
+                     Rating23 = ratingreview[23] %>% as.numeric(),
+                     Rating24 = ratingreview[24] %>% as.numeric(),
+                     Rating25 = ratingreview[25] %>% as.numeric()
+             
+           )
+}
+
+urls.baumann <- read_csv("/Users/paigewitt/Documents/imdb_urls.csv")
+urls.baumann2 <- as.vector(urls.baumann)
+mydata2 <- sapply(urls.baumann2[1:1000], mydata)
+mydata2 = t(mydata)
+mydata3 <- data.frame(mydata2)
+
+```
+
+_Victory conditions:_ You have a data frame with 1000 rows and columns that contain the first six variables, as well as each genre, review, and review helpfulness scores in appropriately formatted columns. Columns have short but clear names. Most rows have no missing values; the few rows where there are missing values have NA in the appropriate places. 
+
+_Mercy condition:_ If you are struggling to get these data in a reasonable form, a compiled, reasonably clean and accurate version for either the URL list or movie data will be added to Canvas called `imdb_urls.csv` and `moviedata.Rdata` respectively.  Use them to answer the following parts, if necessary. Your work in this part, even if not complete, can be scored for partial credit.
+
+2. (30 pts) Write code to plot the distributions of the first five variables listed above. Make sure missing values, if any, are handled gracefully. Your plots should be appropriately labeled, titled, colored, etc. Comment on the features each plot presents -- what information is gained by seeing these graphics?
+
+```{r}
+
+
+```
+
+3. (20 pts) Complete a sentiment analyses on the 25 most helpful reviews for each movie. The choice of lexicon is up to you, but explain your reasons why your choice is the most reasonable/appropriate option. Add a summary of this information to your original data frame.
+
+```{r, eval = FALSE}
+
+
+````
+
+4. (20 pts) Variable Relationships. Create one plot that displays the relationship (or lack thereof) between any of the movie variables. Your plot should be appropriately labeled, titled, colored, etc. Your plot should display at minimum 3 variables. A plot with more variables included will be scored more favorably (as long as the plot is reasonable and legible). Reviews and helpfulness/sentiment scores are considered aggregate variables (e.g., 25 helpfulness scores will be considered a single variable). Some questions that you might consider when creating your plot are below, though you are not limited to these questions. 
+   - Is there any evidence of a relationship between review helpfulness and review sentiment? 
+   - Do the review scores (from the most helpful reviews) generally agree with the overall IMDB average rating?
+   - Is there evidence of a relationship between average IMDB rating and a movie's gross? Does release year seem to have an effect on this relationship?
+   - Is there evidence of a relationship between a movie's budget and a movie's gross? Does release year seem to have an effect on this relationship? 
+   - Do any actors have an effect (positive or negative) on the relationship between budget, gross, or average IMDB rating? Is this pattern common across any genres?
+
+```{r, eval = FALSE}
+
+```
+  
+  
+  
+  
+  
+  
+
+
